@@ -43,6 +43,7 @@ class ImageOrganizer:
         model: str | None = None,
         manifest_path: Path | None = None,
         categories: list[str] | None = None,
+        instructions: str | None = None,
     ) -> None:
         """Configure the organizer.
 
@@ -59,6 +60,8 @@ class ImageOrganizer:
             manifest_path: Optional explicit manifest location. Defaults to
                 ``output_dir/manifest.json``.
             categories: Optional override for the allowed category list.
+            instructions: Optional free-form text appended to the prompt so
+                the user can steer how the model labels each image.
         """
         if mode not in ("move", "copy"):
             raise ValueError(f"mode must be 'move' or 'copy', got {mode!r}")
@@ -70,6 +73,7 @@ class ImageOrganizer:
         self.confidence_threshold = float(confidence_threshold)
         self.model = model or config.DEFAULT_MODEL
         self.categories = categories if categories is not None else config.load_categories()
+        self.instructions = instructions or None
 
         manifest_default = self.output_dir / "manifest.json"
         self.manifest = Manifest(manifest_path if manifest_path is not None else manifest_default)
@@ -112,6 +116,7 @@ class ImageOrganizer:
                     path,
                     model=self.model,
                     categories=self.categories,
+                    instructions=self.instructions,
                 )
             except VisionError as exc:
                 last_exc = exc

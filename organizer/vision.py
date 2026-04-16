@@ -42,6 +42,11 @@ _PROMPT = (
     '  "description": a one-sentence description of what is shown\n'
     '  "confidence": a float between 0.0 and 1.0 reflecting your certainty\n'
     "If you are unsure, prefer the category \"other\" with a low confidence."
+    "{instructions}"
+)
+
+_INSTRUCTIONS_BLOCK = (
+    "\n\nAdditional user instructions (apply these when categorizing):\n{text}"
 )
 
 
@@ -130,6 +135,7 @@ def analyze_image(
     client: OpenAI | None = None,
     model: str | None = None,
     categories: list[str] | None = None,
+    instructions: str | None = None,
 ) -> dict[str, Any]:
     """Classify a single image with the NVIDIA vision model.
 
@@ -140,6 +146,9 @@ def analyze_image(
         model: Optional model override. Defaults to :data:`config.DEFAULT_MODEL`.
         categories: Optional list of allowed categories. Defaults to the
             value returned by :func:`config.load_categories`.
+        instructions: Optional free-form text appended to the system prompt
+            so users can steer how the model labels images (e.g. "These are
+            cosmetics — prefer brand_product names").
 
     Returns:
         Dict with keys ``category``, ``item_name``, ``description`` and
@@ -153,7 +162,10 @@ def analyze_image(
     api_client = client if client is not None else _build_client()
 
     image_url = _encode_image(path)
-    prompt_text = _PROMPT.format(categories=allowed)
+    instructions_text = ""
+    if instructions and instructions.strip():
+        instructions_text = _INSTRUCTIONS_BLOCK.format(text=instructions.strip())
+    prompt_text = _PROMPT.format(categories=allowed, instructions=instructions_text)
 
     try:
         response = api_client.chat.completions.create(
