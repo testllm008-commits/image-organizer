@@ -212,15 +212,18 @@ class ImageOrganizer:
 
         self._place_file(image_path, target)
 
-        entry = {
-            "original": image_path.name,
-            "category": category,
-            "placed_in": placement_dir,
-            "item_name": item_name,
-            "description": result["description"],
-            "confidence": confidence,
-            "new_path": str(target),
-            "mode": self.mode,
-            "dry_run": self.dry_run,
-        }
-        self.manifest.add(entry)
+        # Only persist to the manifest when actually moving/copying files.
+        # A dry-run must not mark images as processed, otherwise a real run
+        # immediately after would skip everything thinking it was done.
+        if not self.dry_run:
+            entry = {
+                "original": image_path.name,
+                "category": category,
+                "placed_in": placement_dir,
+                "item_name": item_name,
+                "description": result["description"],
+                "confidence": confidence,
+                "new_path": str(target),
+                "mode": self.mode,
+            }
+            self.manifest.add(entry)
