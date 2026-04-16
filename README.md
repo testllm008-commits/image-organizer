@@ -44,6 +44,27 @@ Your `.env` should look like:
 NVIDIA_API_KEY=nvapi-xxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
+## Desktop UI
+
+Prefer clicking over typing? A modern web-based desktop UI ships with the
+project (FastAPI + Tailwind + Alpine.js — no Tkinter, no Electron).
+
+```bash
+python gui.py
+```
+
+That boots a tiny local server on `127.0.0.1` and opens the UI in your
+default browser. From there you can:
+
+- Pick the source and output folders with native dialogs.
+- Toggle copy/move, dry-run, and the confidence threshold.
+- Type free-form **instructions** that get appended to the AI prompt
+  (e.g. "These are cosmetics — prefer brand_product names").
+- Watch live progress, a category breakdown, and a streaming log.
+
+On Windows the bundled `Image Organizer.bat` shortcut on the Desktop
+launches the same UI with one double-click.
+
 ## Usage
 
 The wrapper script `run.py` is the easiest entry point.

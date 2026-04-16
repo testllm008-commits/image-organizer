@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Organizer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%97%82%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.13.10/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="/static/app.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: { 950: '#070712', 900: '#0c0c1c', 800: '#15152a', 700: '#1f1f3a' },
+            accent: { 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed' },
+            mint:   { 400: '#34d399', 500: '#10b981' },
+            sun:    { 400: '#fbbf24', 500: '#f59e0b' },
+            rose:   { 400: '#fb7185', 500: '#f43f5e' },
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="h-full font-sans text-slate-200 antialiased bg-ink-950"
+      x-data="organizer()"
+      x-init="init()">
+
+  <!-- Animated gradient backdrop -->
+  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div class="absolute -top-40 -left-40 h-[36rem] w-[36rem] rounded-full bg-accent-600/30 blur-3xl animate-blob"></div>
+    <div class="absolute top-1/2 -right-40 h-[36rem] w-[36rem] rounded-full bg-cyan-500/20 blur-3xl animate-blob animation-delay-2000"></div>
+    <div class="absolute bottom-0 left-1/3 h-[28rem] w-[28rem] rounded-full bg-fuchsia-500/20 blur-3xl animate-blob animation-delay-4000"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-transparent via-ink-950/40 to-ink-950"></div>
+  </div>
+
+  <main class="mx-auto max-w-7xl px-6 py-10">
+
+    <!-- Header -->
+    <header class="mb-10 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div class="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-accent-500 to-fuchsia-600 shadow-lg shadow-accent-500/30">
+          <svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="12" cy="13" r="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-3xl font-semibold tracking-tight bg-gradient-to-r from-white to-accent-400 bg-clip-text text-transparent">
+            Image Organizer
+          </h1>
+          <p class="text-sm text-slate-400">AI-sorted folders, named cleanly, ready in minutes.</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs"
+              :class="apiKeyPresent ? 'text-mint-400' : 'text-rose-400'">
+          <span class="h-2 w-2 rounded-full"
+                :class="apiKeyPresent ? 'bg-mint-500 shadow-[0_0_8px] shadow-mint-500/70' : 'bg-rose-500'"></span>
+          <span x-text="apiKeyPresent ? 'NVIDIA API key loaded' : 'NVIDIA_API_KEY missing'"></span>
+        </span>
+        <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
+          <span class="h-2 w-2 rounded-full"
+                :class="{
+                  'bg-slate-500': state.status === 'idle',
+                  'bg-accent-400 animate-pulse': state.status === 'running',
+                  'bg-mint-500': state.status === 'done',
+                  'bg-sun-500': state.status === 'cancelled',
+                  'bg-rose-500': state.status === 'error',
+                }"></span>
+          <span class="capitalize" x-text="state.status"></span>
+        </span>
+      </div>
+    </header>
+
+    <div class="grid gap-6 lg:grid-cols-5">
+
+      <!-- LEFT: settings -->
+      <section class="lg:col-span-2 space-y-6">
+
+        <!-- Folders -->
+        <div class="glass-card">
+          <div class="card-header">
+            <h2>Folders</h2>
+            <p>Where to read images from and where to write the sorted output tree.</p>
+          </div>
+
+          <label class="field-label">Source folder</label>
+          <div class="flex gap-2">
+            <input type="text" class="field-input" placeholder="C:\path\to\unsorted\images"
+                   x-model="form.source" />
+            <button class="btn-secondary" @click="pick('source')">Browse</button>
+          </div>
+
+          <label class="field-label mt-5">Output folder</label>
+          <div class="flex gap-2">
+            <input type="text" class="field-input" placeholder="C:\path\to\organized\output"
+                   x-model="form.output" />
+            <button class="btn-secondary" @click="pick('output')">Browse</button>
+          </div>
+        </div>
+
+        <!-- Run options -->
+        <div class="glass-card">
+          <div class="card-header">
+            <h2>Run options</h2>
+            <p>Copy keeps originals; move relocates them. Dry-run previews without touching files.</p>
+          </div>
+
+          <label class="field-label">Mode</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button class="pill" :class="form.mode === 'copy' ? 'pill-active' : ''"
+                    @click="form.mode = 'copy'">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Copy
+            </button>
+            <button class="pill" :class="form.mode === 'move' ? 'pill-active' : ''"
+                    @click="form.mode = 'move'">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Move
+            </button>
+          </div>
+
+          <label class="field-label mt-5 flex items-center justify-between">
+            <span>Confidence threshold</span>
+            <span class="font-mono text-accent-400" x-text="form.threshold.toFixed(2)"></span>
+          </label>
+          <input type="range" min="0" max="1" step="0.05"
+                 class="w-full accent-accent-500"
+                 x-model.number="form.threshold" />
+          <p class="text-xs text-slate-500 mt-1">
+            Below this, images go to <code class="text-slate-300">_review/</code> for you to triage.
+          </p>
+
+          <label class="mt-5 inline-flex items-center gap-3 cursor-pointer">
+            <span class="relative">
+              <input type="checkbox" class="peer sr-only" x-model="form.dry_run" />
+              <span class="block h-6 w-11 rounded-full bg-white/10 peer-checked:bg-accent-500 transition"></span>
+              <span class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5"></span>
+            </span>
+            <span class="text-sm">
+              Dry run
+              <span class="text-slate-500">— preview only, no files moved</span>
+            </span>
+          </label>
+        </div>
+
+        <!-- Instructions -->
+        <div class="glass-card">
+          <div class="card-header">
+            <h2>Instructions</h2>
+            <p>Optional steering for the model — e.g. "These are cosmetics, prefer brand names."</p>
+          </div>
+          <textarea class="field-input min-h-[7rem] font-mono text-sm"
+                    placeholder="Tell the AI how to label these images..."
+                    x-model="form.instructions"></textarea>
+
+          <details class="mt-5 group">
+            <summary class="cursor-pointer text-sm text-slate-400 hover:text-accent-400 select-none">
+              Advanced — model override
+            </summary>
+            <input type="text" class="field-input mt-3 font-mono text-xs"
+                   :placeholder="defaultModel"
+                   x-model="form.model" />
+            <p class="text-xs text-slate-500 mt-1">Leave blank to use the default.</p>
+          </details>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex gap-3">
+          <button class="btn-primary flex-1" @click="start()" :disabled="state.running">
+            <svg x-show="!state.running" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            <svg x-show="state.running" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" stroke-opacity="0.25" />
+              <path d="M22 12a10 10 0 00-10-10" stroke-linecap="round" />
+            </svg>
+            <span x-text="state.running ? 'Running…' : 'Start'"></span>
+          </button>
+          <button class="btn-danger" @click="stop()" :disabled="!state.running">Stop</button>
+          <button class="btn-secondary" @click="openOutput()" :disabled="!form.output">Open output</button>
+        </div>
+      </section>
+
+      <!-- RIGHT: progress + log -->
+      <section class="lg:col-span-3 space-y-6">
+
+        <!-- Progress -->
+        <div class="glass-card">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="text-lg font-semibold">Progress</h2>
+              <p class="text-xs text-slate-400" x-text="progressLabel()"></p>
+            </div>
+            <div class="text-right">
+              <div class="text-3xl font-mono font-semibold text-accent-400"
+                   x-text="percent() + '%'"></div>
+              <div class="text-xs text-slate-500" x-text="(state.processed || 0) + ' / ' + (state.total || 0)"></div>
+            </div>
+          </div>
+          <div class="h-3 w-full overflow-hidden rounded-full bg-white/5">
+            <div class="h-full rounded-full bg-gradient-to-r from-accent-500 via-fuchsia-500 to-cyan-400 transition-all duration-500"
+                 :style="`width: ${percent()}%`"></div>
+          </div>
+          <p class="mt-3 truncate text-sm text-slate-300" x-text="state.last_message || '—'"></p>
+        </div>
+
+        <!-- Stats -->
+        <div class="glass-card" x-show="Object.keys(state.stats || {}).length > 0">
+          <h2 class="text-lg font-semibold mb-3">Category breakdown</h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            <template x-for="[name, count] in sortedStats()" :key="name">
+              <div class="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                <div class="text-xs uppercase tracking-wider text-slate-400" x-text="name"></div>
+                <div class="text-2xl font-semibold font-mono text-white" x-text="count"></div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Activity log -->
+        <div class="glass-card flex flex-col" style="height: 28rem;">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold">Activity</h2>
+            <div class="flex items-center gap-3 text-xs text-slate-400">
+              <label class="inline-flex items-center gap-1 cursor-pointer">
+                <input type="checkbox" class="accent-accent-500" x-model="autoscroll" />
+                Auto-scroll
+              </label>
+              <button class="hover:text-accent-400" @click="logs = []">Clear</button>
+            </div>
+          </div>
+          <div class="flex-1 overflow-y-auto rounded-xl bg-black/40 border border-white/5 p-3 font-mono text-xs leading-relaxed"
+               x-ref="logBox">
+            <template x-for="(entry, i) in logs" :key="i">
+              <div class="whitespace-pre-wrap"
+                   :class="logClass(entry)" x-text="entry.text"></div>
+            </template>
+            <div x-show="logs.length === 0" class="text-slate-600 italic">
+              No activity yet. Pick a source folder, an output folder, then hit Start.
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer class="mt-10 flex items-center justify-between text-xs text-slate-500">
+      <span>Default model: <code class="text-slate-400" x-text="defaultModel"></code></span>
+      <span>Image Organizer · powered by NVIDIA NIM vision</span>
+    </footer>
+  </main>
+
+  <!-- Toast -->
+  <div x-show="toast.message"
+       x-transition.opacity
+       class="fixed bottom-6 right-6 max-w-sm rounded-xl border border-white/10 bg-ink-800/90 px-4 py-3 shadow-2xl backdrop-blur"
+       :class="toast.kind === 'error' ? 'text-rose-300' : 'text-mint-300'">
+    <div class="flex items-start gap-3">
+      <span x-text="toast.message"></span>
+      <button class="text-slate-500 hover:text-white" @click="toast.message = ''">×</button>
+    </div>
+  </div>
+
+  <script>
+    function organizer() {
+      return {
+        form: {
+          source: '',
+          output: '',
+          mode: 'copy',
+          dry_run: false,
+          threshold: 0.7,
+          instructions: '',
+          model: '',
+        },
+        state: {
+          status: 'idle',
+          running: false,
+          processed: 0,
+          total: 0,
+          last_message: '',
+          stats: {},
+          error: null,
+        },
+        logs: [],
+        autoscroll: true,
+        toast: { message: '', kind: 'info' },
+        defaultModel: {{ default_model | tojson }},
+        apiKeyPresent: {{ api_key_present | tojson }},
+
+        async init() {
+          // Restore last-used form values from localStorage.
+          try {
+            const saved = JSON.parse(localStorage.getItem('imgorg.form') || '{}');
+            Object.assign(this.form, saved);
+          } catch (_) { /* ignore */ }
+          this.$watch('form', (val) => {
+            localStorage.setItem('imgorg.form', JSON.stringify(val));
+          }, { deep: true });
+
+          await this.refreshStatus();
+          this.openStream();
+        },
+
+        async refreshStatus() {
+          try {
+            const r = await fetch('/api/status');
+            const s = await r.json();
+            Object.assign(this.state, s);
+          } catch (_) { /* ignore */ }
+        },
+
+        openStream() {
+          const es = new EventSource('/api/events');
+          es.onmessage = (ev) => {
+            try {
+              const data = JSON.parse(ev.data);
+              this.handleEvent(data);
+            } catch (_) { /* ignore */ }
+          };
+          es.onerror = () => {
+            // Browser auto-reconnects.
+          };
+        },
+
+        handleEvent(event) {
+          if (event.type === 'state' && event.state) {
+            Object.assign(this.state, event.state);
+          } else if (event.type === 'progress') {
+            this.state.processed = event.processed;
+            this.state.total = event.total;
+          } else if (event.type === 'log') {
+            this.logs.push({
+              text: event.text,
+              stream: event.stream,
+              level: event.level || 'info',
+            });
+            if (this.logs.length > 1000) this.logs = this.logs.slice(-800);
+            if (this.autoscroll) {
+              this.$nextTick(() => {
+                const box = this.$refs.logBox;
+                if (box) box.scrollTop = box.scrollHeight;
+              });
+            }
+          }
+        },
+
+        percent() {
+          if (!this.state.total) return 0;
+          return Math.min(100, Math.round((this.state.processed / this.state.total) * 100));
+        },
+
+        progressLabel() {
+          if (this.state.status === 'running') return 'Sorting images…';
+          if (this.state.status === 'done') return 'Run complete.';
+          if (this.state.status === 'cancelled') return 'Run cancelled.';
+          if (this.state.status === 'error') return 'Run failed: ' + (this.state.error || '');
+          return 'Idle.';
+        },
+
+        sortedStats() {
+          return Object.entries(this.state.stats || {})
+            .sort((a, b) => b[1] - a[1]);
+        },
+
+        logClass(entry) {
+          if (entry.level === 'error' || entry.stream === 'stderr') return 'text-rose-300';
+          if (entry.level === 'warning') return 'text-sun-400';
+          if (entry.text.includes('SKIPPED')) return 'text-sun-400';
+          if (entry.text.match(/^\[\d+\/\d+\]/)) return 'text-slate-200';
+          return 'text-slate-400';
+        },
+
+        async pick(field) {
+          try {
+            const r = await fetch('/api/pick-folder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: field === 'source' ? 'Pick source folder' : 'Pick output folder',
+                initial: this.form[field] || '',
+              }),
+            });
+            const data = await r.json();
+            if (data.path) this.form[field] = data.path;
+          } catch (e) {
+            this.showToast('Folder picker failed: ' + e, 'error');
+          }
+        },
+
+        async start() {
+          this.logs = [];
+          try {
+            const r = await fetch('/api/start', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(this.form),
+            });
+            const data = await r.json();
+            if (!r.ok) {
+              this.showToast(data.detail || 'Failed to start.', 'error');
+              return;
+            }
+            this.showToast('Job started.', 'info');
+          } catch (e) {
+            this.showToast('Could not reach server: ' + e, 'error');
+          }
+        },
+
+        async stop() {
+          await fetch('/api/stop', { method: 'POST' });
+          this.showToast('Stop requested.', 'info');
+        },
+
+        async openOutput() {
+          if (!this.form.output) return;
+          try {
+            await fetch('/api/open-folder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: this.form.output }),
+            });
+          } catch (e) {
+            this.showToast('Could not open folder: ' + e, 'error');
+          }
+        },
+
+        showToast(message, kind = 'info') {
+          this.toast = { message, kind };
+          setTimeout(() => { this.toast.message = ''; }, 4000);
+        },
+      };
+    }
+  </script>
+</body>
+</html>
