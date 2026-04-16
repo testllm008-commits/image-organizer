@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.pyc
+organized_images/
+unsorted_images/
+.pytest_cache/
+venv/
+.venv/
