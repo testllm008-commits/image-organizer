@@ -44,6 +44,93 @@ Your `.env` should look like:
 NVIDIA_API_KEY=nvapi-xxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
+## MCP server (use it from Cursor / Claude Desktop / Cline / Continue)
+
+The project ships an [MCP](https://modelcontextprotocol.io) server so any
+MCP-aware AI client can drive the organizer. After configuring it, you
+just chat with your IDE assistant:
+
+> *"Organize C:\Users\me\Downloads into D:\Sorted, copy mode, threshold
+> 0.8, instructions: 'these are screenshots, prefer descriptive names'.
+> Then check progress every 30s."*
+
+It boots over stdio, no separate process to manage:
+
+```bash
+python -m organizer.mcp_server
+```
+
+### Tools exposed
+
+| Tool | What it does |
+| --- | --- |
+| `organize_folder` | Start an organize job in the background. Args: `source`, `output`, `mode`, `dry_run`, `threshold`, `instructions`, `model`. |
+| `get_status` | Snapshot of the running/last job: progress, stats, recent log lines. |
+| `stop_job` | Cancel the running job between images. |
+| `analyze_image` | Classify a single image synchronously, no file changes. |
+| `list_categories` | Active category list + default model + key-set status. |
+| `read_manifest` | Read entries from a previous run's `manifest.json`. |
+
+Resources: `imgorg://categories` and `imgorg://status`.
+
+### Configure your client
+
+In every snippet below, replace the absolute paths with the ones on your
+machine. The server inherits `NVIDIA_API_KEY` from the environment, but
+you can also pass it explicitly via `env`.
+
+**Claude Desktop** — edit `%APPDATA%\Claude\claude_desktop_config.json`
+(macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "image-organizer": {
+      "command": "python",
+      "args": ["-m", "organizer.mcp_server"],
+      "cwd": "C:\\Users\\hp\\Desktop\\Image-organizer",
+      "env": { "NVIDIA_API_KEY": "nvapi-..." }
+    }
+  }
+}
+```
+
+**Cursor** — Settings → Cursor Settings → MCP → "Add new MCP server":
+
+```json
+{
+  "mcpServers": {
+    "image-organizer": {
+      "command": "python",
+      "args": ["-m", "organizer.mcp_server"],
+      "cwd": "C:\\Users\\hp\\Desktop\\Image-organizer"
+    }
+  }
+}
+```
+
+**VS Code + [Cline](https://github.com/cline/cline)** — Cline panel →
+MCP Servers → "Configure MCP Servers". Same JSON shape as Cursor.
+
+**VS Code + [Continue](https://continue.dev/)** — edit
+`~/.continue/config.yaml`:
+
+```yaml
+mcpServers:
+  - name: image-organizer
+    command: python
+    args: ["-m", "organizer.mcp_server"]
+    cwd: C:\Users\hp\Desktop\Image-organizer
+```
+
+**Claude Code** (`claude` CLI) — register once per project:
+
+```bash
+claude mcp add image-organizer python -- -m organizer.mcp_server
+```
+
+Restart the IDE/client after editing config so it picks up the new server.
+
 ## Desktop UI
 
 Prefer clicking over typing? A modern web-based desktop UI ships with the
