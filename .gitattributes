@@ -1,0 +1,6 @@
+# Force LF on shell scripts so they keep working when cloned on Windows
+# and copied into a Linux container.
+*.sh           text eol=lf
+docker/**      text eol=lf
+Dockerfile     text eol=lf
+.dockerignore  text eol=lf

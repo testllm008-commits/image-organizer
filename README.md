@@ -44,6 +44,80 @@ Your `.env` should look like:
 NVIDIA_API_KEY=nvapi-xxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
+## Run in Docker
+
+The project ships a multi-stage `Dockerfile` and a `docker-compose.yml`.
+The published image lives on **GitHub Container Registry** and is
+rebuilt automatically by [`.github/workflows/docker-publish.yml`](.github/workflows/docker-publish.yml)
+for both `linux/amd64` and `linux/arm64`.
+
+```bash
+# pull the latest from GHCR
+docker pull ghcr.io/testllm008-commits/image-organizer:latest
+```
+
+### Web UI
+
+```bash
+docker run --rm -it \
+  -e NVIDIA_API_KEY=nvapi-... \
+  -p 8765:8765 \
+  -v /path/to/unsorted:/data/source:ro \
+  -v /path/to/output:/data/output \
+  ghcr.io/testllm008-commits/image-organizer:latest
+```
+
+Then open <http://localhost:8765>. In the UI, set Source = `/data/source`
+and Output = `/data/output` (the "Browse" buttons can't traverse the
+container's filesystem, so type the paths directly).
+
+### One-shot CLI run
+
+```bash
+docker run --rm \
+  -e NVIDIA_API_KEY=nvapi-... \
+  -v /path/to/unsorted:/data/source:ro \
+  -v /path/to/output:/data/output \
+  ghcr.io/testllm008-commits/image-organizer:latest \
+  cli --source /data/source --output /data/output --mode copy
+```
+
+### MCP server (stdio)
+
+The container runs the MCP server with `mcp` as the command. Wire any
+MCP client at it via `docker run -i`:
+
+```json
+{
+  "mcpServers": {
+    "image-organizer": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "-e", "NVIDIA_API_KEY",
+        "-v", "C:\\Users\\me\\Pictures:/data/source:ro",
+        "-v", "C:\\Users\\me\\Sorted:/data/output",
+        "ghcr.io/testllm008-commits/image-organizer:latest",
+        "mcp"
+      ],
+      "env": { "NVIDIA_API_KEY": "nvapi-..." }
+    }
+  }
+}
+```
+
+### docker compose
+
+For day-to-day use, drop a `.env` next to `docker-compose.yml` containing
+`NVIDIA_API_KEY=...`, edit the volume paths in the compose file, then:
+
+```bash
+docker compose up -d           # start the web UI in the background
+docker compose logs -f         # follow output
+docker compose run --rm imgorg cli --help     # one-shot CLI
+docker compose down            # stop
+```
+
 ## MCP server (use it from Cursor / Claude Desktop / Cline / Continue)
 
 The project ships an [MCP](https://modelcontextprotocol.io) server so any

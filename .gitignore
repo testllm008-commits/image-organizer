@@ -6,3 +6,4 @@ unsorted_images/
 .pytest_cache/
 venv/
 .venv/
+.claude/

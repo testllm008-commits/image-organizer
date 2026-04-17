@@ -1,0 +1,45 @@
+# VCS
+.git
+.gitignore
+.github
+
+# Python build artefacts
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+venv
+env
+.eggs
+*.egg-info
+build
+dist
+
+# Tests + caches
+tests
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+
+# Editor / OS junk
+.idea
+.vscode
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local secrets — never bake these into the image
+.env
+
+# Local sample data
+unsorted_images
+organized_images
+*.log
+
+# Docker scaffolding (build context only, no need inside the image)
+docker-compose.yml
+.dockerignore
+Dockerfile

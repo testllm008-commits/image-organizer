@@ -1,0 +1,20 @@
+services:
+  imgorg:
+    build: .
+    image: image-organizer:local
+    container_name: image-organizer
+    restart: unless-stopped
+    environment:
+      # Either drop your key here, or rely on a top-level .env file picked
+      # up automatically by `docker compose up`.
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:?NVIDIA_API_KEY must be set in .env or the shell}
+      IMGORG_PORT: "8765"
+    ports:
+      - "8765:8765"
+    volumes:
+      # Edit these to point at YOUR folders. The container expects images
+      # under /data/source and writes the sorted tree to /data/output.
+      - ./unsorted_images:/data/source:ro
+      - ./organized_images:/data/output:rw
+    # Default command is `web`; override with e.g. `docker compose run --rm imgorg cli --help`.
+    command: ["web"]
